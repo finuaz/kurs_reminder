@@ -1,4 +1,4 @@
-# kurs_reminder
+# GERR : Good Exchange Rate Reminder
 ---
 
 ## About
