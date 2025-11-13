@@ -17,7 +17,7 @@ headers = {
 locale.setlocale(locale.LC_NUMERIC, "id_ID.UTF-8")
 
 target = 15000
-parsed_target = locale.format_string("%.2f", target, grouping=True).replace(".", "X").replace(",", ".").replace("X", ",")
+formatted_target = locale.format_string("%.2f", target, grouping=True).replace(".", "X").replace(",", ".").replace("X", ",")
 
 
 # Send GET request
@@ -63,7 +63,7 @@ if usd_columns:
     print(f"\nUSD eRate Buy: {buy_rate}")
     print(f"USD eRate Sell: {sell_rate}")
     if buy_rate > target:
-        print(f"Alert: USD eRate Buy is above IDR {parsed_target}!")
+        print(f"Alert: USD eRate Buy is above IDR {formatted_target}!")
 
 else:
     print("USD row not found in the table.")
