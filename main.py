@@ -93,10 +93,10 @@ def main():
     print(f"Kurs beli USD saat ini: {format_idr(usd_rate)} IDR")
 
     if usd_rate >= TARGET_RATE:
-        print("🚨 Kurs sudah melebihi target, kirim notifikasi!")
+        print("🚨 Kurs sudah melebihi target, kirim notifikasi!", "\n timestamp", time.strftime("%Y-%m-%d %H:%M:%S"))
         send_notification(usd_rate)
     else:
-        print("📉 Belum mencapai target.")
+        print("📉 Belum mencapai target.", "\n timestamp", time.strftime("%Y-%m-%d %H:%M:%S"))
 
 if __name__ == "__main__":
     # Jalankan sekali
@@ -106,5 +106,5 @@ if __name__ == "__main__":
     while True:
         main()
         time.sleep(600)  # 600 detik = 10 menit
-        print("iteration run at:", time.strftime("%Y-%m-%d %H:%M:%S"))
+
 
