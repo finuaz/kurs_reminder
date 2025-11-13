@@ -10,6 +10,7 @@ URL = "https://www.bca.co.id/id/informasi/kurs"
 TARGET_RATE = 16800  # target rate in IDR
 NTFY_TOPIC = "finuaz-bca-usd-idr-erate"
 NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
+ITERATION = 600
 
 
 def format_idr(number):
@@ -105,6 +106,6 @@ if __name__ == "__main__":
     # Atau jalankan periodik (contoh: tiap 30 menit)
     while True:
         main()
-        time.sleep(600)  # 600 detik = 10 menit
+        time.sleep(ITERATION) 
 
 
