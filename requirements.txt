@@ -3,4 +3,4 @@ beautifulsoup4
 lxml
 pandas
 python-dotenv
-flask
+flaskpip
