@@ -13,9 +13,15 @@ NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
 ITERATION = 600
 
 
-def format_idr(number):
-    locale.setlocale(locale.LC_NUMERIC, "id_ID.UTF-8")
-    return locale.format_string("%.2f", number, grouping=True).replace(".", "X").replace(",", ".").replace("X", ",")
+# def format_idr(number):
+#     locale.setlocale(locale.LC_NUMERIC, "id_ID.UTF-8")
+#     return locale.format_string("%.2f", number, grouping=True).replace(".", "X").replace(",", ".").replace("X", ",")
+
+def format_idr(value: int | float) -> str:
+    # Format with dot thousand separator and comma decimal
+    s = f"{value:,.2f}"
+    return s.replace(",", "_").replace(".", ",").replace("_", ".")
+
 
 def get_usd_rate():
     buy_rate = None
