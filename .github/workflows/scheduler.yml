@@ -3,7 +3,7 @@ name: Scheduler
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 * * * *"  # tiap jam
+    - cron: "*/10 * * * *"  # tiap 10 menit
 
 jobs:
   run-task:
