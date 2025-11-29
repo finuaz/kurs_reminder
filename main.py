@@ -18,7 +18,9 @@ def format_idr(number):
     return locale.format_string("%.2f", number, grouping=True).replace(".", "X").replace(",", ".").replace("X", ",")
 
 def get_usd_rate():
-
+    buy_rate = None
+    sell_rate = None
+    
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
@@ -101,11 +103,11 @@ def main():
 
 if __name__ == "__main__":
     # Jalankan sekali
-    # main()
+    main()
 
     # Atau jalankan periodik (contoh: tiap 30 menit)
-    while True:
-        main()
-        time.sleep(ITERATION) 
+    # while True:
+    #     main()
+    #     time.sleep(ITERATION) 
 
 
