@@ -20,7 +20,7 @@ def format_idr(number):
 def get_usd_rate():
     buy_rate = None
     sell_rate = None
-    
+
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
@@ -30,6 +30,12 @@ def get_usd_rate():
  
     # Send request and validate response
     response = requests.get(URL, headers=headers)
+    print("=== DEBUG RESPONSE ===")
+    print("Status:", response.status_code)
+    print("Headers:", response.headers)
+    print("First 500 chars of HTML:")
+    print(response.text[:500])
+    print("======================")
 
     # Check if request was successful
     if response.status_code == 200:
