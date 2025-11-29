@@ -7,7 +7,7 @@ import os
 
 # configuration
 URL = "https://www.bca.co.id/id/informasi/kurs"
-TARGET_RATE = 17000  # target rate in IDR
+TARGET_RATE = 16000  # target rate in IDR
 NTFY_TOPIC = "finuaz-bca-usd-idr-erate"
 NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
 ITERATION = 600
