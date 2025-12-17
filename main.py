@@ -1,28 +1,49 @@
 import requests
 from bs4 import BeautifulSoup
-import locale
 import time
 from dotenv import load_dotenv
 import os
+load_dotenv()
+import time
+
 
 # configuration
-URL = "https://www.bca.co.id/id/informasi/kurs"
-TARGET_RATE = 16000  # target rate in IDR
-NTFY_TOPIC = "finuaz-bca-usd-idr-erate"
-NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
-ITERATION = 600
 
+BASE_URL = "https://www.bca.co.id/id/informasi/kurs"
+VALID_MODES = {"always", "on_change", "on_threshold"}
+VALID_THRESHOLDS = set(range(15000, 17501, 100))  # Example valid thresholds from 15000 to 17500 with step of 100
+TOPIC_PREFIX = "finuaz-bca-usd-idr-"
 
-# def format_idr(number):
-#     locale.setlocale(locale.LC_NUMERIC, "id_ID.UTF-8")
-#     return locale.format_string("%.2f", number, grouping=True).replace(".", "X").replace(",", ".").replace("X", ",")
+# helper functions 
+def topic_for_target(target: int) -> str:
+    return f"{TOPIC_PREFIX}{target}"
+
+def extract_threshold_from_topic(topic: str) -> int | None:
+    if not topic.startswith(TOPIC_PREFIX):
+        return None
+    try:
+        return int(topic[len(TOPIC_PREFIX):])
+    except ValueError:
+        return None
+
+def send_notification(rate: int, target: int):
+    topic = topic_for_target(target)
+    message = (
+        f"💰 USD reached {format_idr(rate)} IDR\n"
+        f"🎯 Threshold crossed: {format_idr(target)}"
+    )
+
+    requests.post(
+        f"https://ntfy.sh/{topic}",
+        data=message.encode("utf-8")
+    )
 
 def format_idr(value: int | float) -> str:
     # Format with dot thousand separator and comma decimal
     s = f"{value:,.2f}"
     return s.replace(",", "_").replace(".", ",").replace("_", ".")
 
-
+# scraping function
 def get_usd_rate():
     buy_rate = None
     sell_rate = None
@@ -34,16 +55,9 @@ def get_usd_rate():
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     }
  
-    # Send request and validate response
-    response = requests.get(URL, headers=headers)
+    response = requests.get(BASE_URL, headers=headers)
     print("=== DEBUG RESPONSE ===")
     print("Status:", response.status_code)
-    print("Headers:", response.headers)
-    print("First 500 chars of HTML:")
-    print(response.text[:500])
-    print("======================")
-
-    # Check if request was successful
     if response.status_code == 200:
         print("✅ Request successful!")
 
@@ -64,8 +78,8 @@ def get_usd_rate():
 
         usd_columns = soup.find_all("tr", class_="m-table-body-row", code="USD")
         if usd_columns:
-
             usd_data = {}
+
             for td in usd_columns[0].find_all("td", class_="rate-column", attrs={"rate-type": "eRate-buy"}):
                 usd_data["eRate-buy"] = td.text.strip()
 
@@ -77,9 +91,6 @@ def get_usd_rate():
             buy_rate = int(usd_data["eRate-buy"].replace(",00", "").replace(".", ""))
             sell_rate = int(usd_data["eRate-sell"].replace(",00", "").replace(".", ""))
 
-            if buy_rate > TARGET_RATE:
-                print(f"ALERT !!!\nUSD eRate Buy is above IDR {format_idr(TARGET_RATE)}!!!\nCurrent rate: IDR {usd_data['eRate-buy']}!!!")
-
         else:
             print("USD row not found in the table.")
     else:
@@ -88,18 +99,27 @@ def get_usd_rate():
 
     return buy_rate
 
-    # Parse HTML menggunakan BeautifulSoup
-    
-def send_notification(rate):
-    """Kirim notifikasi via ntfy"""
-    message = f"💰 Kurs USD sekarang {format_idr(rate)} IDR — sudah di atas {format_idr(TARGET_RATE)}!"
-    requests.post(NTFY_URL, data=message.encode("utf-8"))
+# tracking triggered notifications
+def load_triggered():
+    try:
+        with open("triggered.txt") as f:
+            return set(map(int, f.read().splitlines()))
+    except FileNotFoundError:
+        return set()
 
+def save_triggered(triggered):
+    with open("triggered.txt", "w") as f:
+        for t in triggered:
+            f.write(f"{t}\n")
 
-# Invoke the function
-# get_usd_rate()
-
+# main function
 def main():
+    start = time.perf_counter()
+
+    # reset per-run state
+    if os.path.exists("triggered.txt"):
+        os.remove("triggered.txt")
+
     usd_rate = get_usd_rate()
     if not usd_rate:
         print("Gagal ambil data kurs.")
@@ -107,17 +127,25 @@ def main():
 
     print(f"Kurs beli USD saat ini: {format_idr(usd_rate)} IDR")
 
-    if usd_rate >= TARGET_RATE:
-        print("🚨 Kurs sudah melebihi target, kirim notifikasi!", "\n timestamp", time.strftime("%Y-%m-%d %H:%M:%S"))
-        send_notification(usd_rate)
-    else:
-        print("📉 Belum mencapai target.", "\n timestamp", time.strftime("%Y-%m-%d %H:%M:%S"))
+    triggered = load_triggered()
+
+    for target in VALID_THRESHOLDS:
+        if usd_rate >= target and target not in triggered:
+            send_notification(usd_rate, target)
+            triggered.add(target)
+            time.sleep(0.15)  # brief pause to avoid spamming
+
+    save_triggered(triggered)
+
+    elapsed = time.perf_counter() - start
+    print(f"⏱ Run completed in {elapsed:.2f} seconds")
+
 
 if __name__ == "__main__":
-    # Jalankan sekali
     main()
 
-    # Atau jalankan periodik (contoh: tiap 30 menit)
+    # To run periodically, uncomment below:
+    # ITERATION = 60 * 30  # 30 minutes
     # while True:
     #     main()
     #     time.sleep(ITERATION) 
