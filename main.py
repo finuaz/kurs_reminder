@@ -19,6 +19,7 @@ VALID_THRESHOLDS = set(
     range(15000, 17501, 100)
 )  # Example valid thresholds from 15000 to 17500 with step of 100
 TOPIC_PREFIX = "finuaz-bca-usd-idr-"
+REFERENCE_URL = "https://markets.ft.com/data/currencies/ajax/conversion?amount=1&baseCurrency=USD&comparison=IDR"
 
 
 def detect_environment() -> str:
@@ -118,6 +119,26 @@ def get_usd_rate():
     return {"buy": buy_rate, "sell": sell_rate, "http_status": response.status_code}
 
 
+def get_reference_rate():
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    }
+
+    response = requests.get(REFERENCE_URL, headers=headers)
+    if response.status_code == 200:
+        print("✅ Reference request successful!")
+        data = response.json()
+        rate_str = data["data"]["exchangeRate"]
+        parsed_rate = int(float(rate_str.replace(",", "")))
+        return parsed_rate
+    else:
+        print(f"❌ Failed to retrieve data, status code: {response.status_code}")
+        return None
+
+
 # tracking triggered notifications
 def load_triggered():
     try:
@@ -165,6 +186,8 @@ def main():
 
     save_triggered(triggered)
 
+    reference_value = get_reference_rate()
+
     elapsed_ms = int((time.perf_counter() - run_start) * 1000)
 
     record = {
@@ -177,11 +200,14 @@ def main():
         "rate_type": "eRate-buy",
         "buy-rate": usd_rate_data["buy"],
         "sell-rate": usd_rate_data["sell"],
+        "delta_rate": usd_rate_data["sell"] - usd_rate_data["buy"],
+        "reference-rate": reference_value,
+        "reference-delta": reference_value - usd_rate_data["buy"],
         "thresholds_checked": sorted(VALID_THRESHOLDS),
         "thresholds_triggered": triggered_now,
         "notification_count": len(triggered_now),
         "mode": "on_threshold",
-        "schema_version": 2,
+        "schema_version": 2.1,
         "latency_ms": elapsed_ms,
     }
 
