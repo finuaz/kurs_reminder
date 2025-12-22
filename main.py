@@ -3,14 +3,13 @@ from bs4 import BeautifulSoup
 import time
 from dotenv import load_dotenv
 import os
+import uuid
 
-load_dotenv()
-import time
+# load_dotenv()
 
-import json
 from datetime import datetime, timezone
-from pathlib import Path
-
+from recorder import append_record
+from recorder import get_monthly_log_file
 
 # configuration
 
@@ -22,25 +21,10 @@ VALID_THRESHOLDS = set(
 TOPIC_PREFIX = "finuaz-bca-usd-idr-"
 
 
-# recorder
-DATA_DIR = Path("data/rates")
-
-
-def get_monthly_log_file(now: datetime) -> Path:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    filename = f"usd_idr_{now.strftime('%Y-%m')}.jsonl"
-    return DATA_DIR / filename
-
-
-def append_record(record: dict):
-    now = datetime.now(timezone.utc).astimezone()
-    log_file = get_monthly_log_file(now)
-
-    with open(log_file, "a", encoding="utf-8") as f:
-        json.dump(record, f, ensure_ascii=False)
-        f.write("\n")
-
-    print(f"Record appended to {log_file}")
+def detect_environment() -> str:
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        return "github_actions"
+    return "local"
 
 
 # helper functions
@@ -131,7 +115,7 @@ def get_usd_rate():
         print(f"❌ Failed to retrieve data, status code: {response.status_code}")
         exit()
 
-    return buy_rate
+    return {"buy": buy_rate, "sell": sell_rate, "http_status": response.status_code}
 
 
 # tracking triggered notifications
@@ -151,7 +135,6 @@ def save_triggered(triggered):
 
 # main function
 def main():
-    start = time.perf_counter()
 
     run_start = time.perf_counter()
     now = datetime.now(timezone.utc).astimezone()
@@ -162,18 +145,20 @@ def main():
     if os.path.exists("triggered.txt"):
         os.remove("triggered.txt")
 
-    usd_rate = get_usd_rate()
-    if not usd_rate:
+    usd_rate_data = get_usd_rate()
+
+    buy_rate = usd_rate_data["buy"]
+    if not buy_rate:
         print("Gagal ambil data kurs.")
         return
 
-    print(f"Kurs beli USD saat ini: {format_idr(usd_rate)} IDR")
+    print(f"Kurs beli USD saat ini: {format_idr(buy_rate)} IDR")
 
     triggered = load_triggered()
 
     for target in VALID_THRESHOLDS:
-        if usd_rate >= target and target not in triggered:
-            send_notification(usd_rate, target)
+        if buy_rate >= target and target not in triggered:
+            send_notification(buy_rate, target)
             triggered.add(target)
             triggered_now.append(target)
             time.sleep(0.15)  # brief pause to avoid spamming
@@ -183,28 +168,27 @@ def main():
     elapsed_ms = int((time.perf_counter() - run_start) * 1000)
 
     record = {
+        "run_id": str(uuid.uuid4()),
+        "environment": detect_environment(),
         "timestamp": now.isoformat(),
+        "http_status": usd_rate_data["http_status"],
         "source": "bca",
         "currency_pair": "USD/IDR",
         "rate_type": "eRate-buy",
-        "rate": usd_rate,
+        "buy-rate": usd_rate_data["buy"],
+        "sell-rate": usd_rate_data["sell"],
         "thresholds_checked": sorted(VALID_THRESHOLDS),
         "thresholds_triggered": triggered_now,
+        "notification_count": len(triggered_now),
         "mode": "on_threshold",
+        "schema_version": 2,
         "latency_ms": elapsed_ms,
     }
 
     append_record(record)
 
-    elapsed = time.perf_counter() - start
-    print(f"⏱ Run completed in {elapsed:.2f} seconds")
+    print(f"⏱ Run completed in {elapsed_ms:.2f} ms")
 
 
 if __name__ == "__main__":
     main()
-
-    # To run periodically, uncomment below:
-    # ITERATION = 60 * 30  # 30 minutes
-    # while True:
-    #     main()
-    #     time.sleep(ITERATION)
