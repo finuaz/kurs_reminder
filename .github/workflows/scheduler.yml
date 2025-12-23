@@ -3,27 +3,20 @@ name: Scheduler
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/10 * * * *"  # tiap 10 menit
+    - cron: "*/10 * * * *" # tiap 10 menit
 
 jobs:
   run-task:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
-      
-    #   - name: Install en_US.UTF-8 locale
-    #     run: |
-    #         sudo apt-get update
-    #         sudo apt-get install -y locales
-    #         sudo locale-gen en_US.UTF-8
-    #         sudo update-locale LANG=en_US.UTF-8
-    #     shell: bash
-      
+        uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "3.14"
+          check-latest: true
 
       - name: Install dependencies
         run: |
@@ -31,3 +24,9 @@ jobs:
 
       - name: Run scheduled task
         run: python main.py
+
+      - name: Upload rate logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: rate-logs
+          path: data/rates/
