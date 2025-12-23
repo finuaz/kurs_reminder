@@ -5,16 +5,12 @@ from dotenv import load_dotenv
 import os
 import uuid
 
-# load_dotenv()
-
 from datetime import datetime, timezone
 from recorder import append_record
 from recorder import get_monthly_log_file
-
 from scraper import get_usd_rate, get_reference_rate
 
 # configuration
-
 BASE_URL = "https://www.bca.co.id/id/informasi/kurs"
 VALID_MODES = {"always", "on_change", "on_threshold"}
 VALID_THRESHOLDS = set(
